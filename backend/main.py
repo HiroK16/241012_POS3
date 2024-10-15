@@ -1,9 +1,15 @@
 # backend/main.py
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
-from . import models, database
+from models import *  # models.pyの全てのエクスポートをインポート
+from database import *  # database.pyの全てのエクスポートをインポート
+
 
 app = FastAPI()
+
+@app.get("/")
+def read_root():
+    return {"message": "Hello, Dumn World!"}
 
 # Create the database tables
 models.Base.metadata.create_all(bind=database.engine)
