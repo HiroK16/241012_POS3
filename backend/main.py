@@ -1,68 +1,28 @@
-# backend/main.py
-from fastapi import FastAPI, HTTPException, Depends
-from sqlalchemy.orm import Session
-from models import *  # models.pyの全てのエクスポートをインポート
-from database import *  # database.pyの全てのエクスポートをインポート
-
+from fastapi import FastAPI, HTTPException
+from backend.models import Product, Purchase
+from backend.crud import get_product_by_code, create_purchase
+from dotenv import load_dotenv
+import os
 
 app = FastAPI()
 
-@app.get("/")
-def read_root():
-    return {"message": "Hello, Dumn World!"}
+load_dotenv()
 
-# Create the database tables
-models.Base.metadata.create_all(bind=database.engine)
+db_config = {
+    'user': 'root',
+    'password': os.getenv("DATABASE_PASSWORD"),  # MySQLのパスワードに合わせて変更
+    'host': 'localhost',
+    'database': 'pos_app'
+}
 
-# Create Product Schema for Request/Response
-from pydantic import BaseModel
-
-class ProductCreate(BaseModel):
-    product_code: str
-    product_name: str
-    product_price: float
-
-class ProductUpdate(BaseModel):
-    product_name: str
-    product_price: float
-
-@app.post("/products/", response_model=ProductCreate)
-def create_product(product: ProductCreate, db: Session = Depends(database.get_db)):
-    db_product = models.Product(
-        product_code=product.product_code,
-        product_name=product.product_name,
-        product_price=product.product_price
-    )
-    db.add(db_product)
-    db.commit()
-    db.refresh(db_product)
-    return db_product
-
-@app.get("/products/{product_code}", response_model=ProductCreate)
-def read_product(product_code: str, db: Session = Depends(database.get_db)):
-    db_product = db.query(models.Product).filter(models.Product.product_code == product_code).first()
-    if db_product is None:
+@app.get("/api/products/{code}")
+async def read_product(code: str):
+    product = get_product_by_code(code)
+    if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
-    return db_product
+    return product
 
-@app.put("/products/{product_code}", response_model=ProductCreate)
-def update_product(product_code: str, product: ProductUpdate, db: Session = Depends(database.get_db)):
-    db_product = db.query(models.Product).filter(models.Product.product_code == product_code).first()
-    if db_product is None:
-        raise HTTPException(status_code=404, detail="Product not found")
-    
-    db_product.product_name = product.product_name
-    db_product.product_price = product.product_price
-    db.commit()
-    db.refresh(db_product)
-    return db_product
-
-@app.delete("/products/{product_code}", response_model=str)
-def delete_product(product_code: str, db: Session = Depends(database.get_db)):
-    db_product = db.query(models.Product).filter(models.Product.product_code == product_code).first()
-    if db_product is None:
-        raise HTTPException(status_code=404, detail="Product not found")
-    
-    db.delete(db_product)
-    db.commit()
-    return "Product deleted successfully"
+@app.post("/api/purchase")
+async def purchase_items(purchase_list: list):
+    total = create_purchase(purchase_list)
+    return {"total": total}

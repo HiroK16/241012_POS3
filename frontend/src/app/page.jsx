@@ -1,57 +1,54 @@
 "use client";
 
 import { useState } from 'react';
+import ProductForm from './components/ProductForm';
+import PurchaseList from './components/PurchaseList';
 
-export default function ProductForm() {
-  const [formData, setFormData] = useState({
-    productName: '',
-    productCode: '',
-    productPrice: '',
-  });
+export default function PosApp() {
+  const [code, setCode] = useState('');
+  const [product, setProduct] = useState(null);
+  const [purchaseList, setPurchaseList] = useState([]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+  const fetchProduct = async () => {
+    const res = await fetch(`/api/products/${code}`);
+    const data = await res.json();
+    if (data) {
+      setProduct(data);
+    } else {
+      alert("商品がマスタ未登録です");
+    }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const response = await fetch('/api/products', {
+  const addProduct = () => {
+    setPurchaseList([...purchaseList, product]);
+    setProduct(null);
+    setCode('');
+  };
+
+  const completePurchase = async () => {
+    const res = await fetch('/api/purchase', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(formData),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: purchaseList }),
     });
+    const result = await res.json();
+    alert(`合計金額: ${result.total}円`);
+    setPurchaseList([]);
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input
-        type="text"
-        name="productName"
-        value={formData.productName}
-        onChange={handleChange}
-        placeholder="商品名"
-        style={{ lineHeight: '1.5' }} // 行間を指定
+    <div>
+      <ProductForm 
+        code={code} 
+        setCode={setCode} 
+        fetchProduct={fetchProduct} 
+        product={product} 
+        addProduct={addProduct} 
       />
-      <input
-        type="text"
-        name="productCode"
-        value={formData.productCode}
-        onChange={handleChange}
-        placeholder="商品コード"
-        style={{ lineHeight: '1.5' }} // 行間を指定
+      <PurchaseList 
+        purchaseList={purchaseList} 
+        completePurchase={completePurchase} 
       />
-      <input
-        type="number"
-        name="productPrice"
-        value={formData.productPrice}
-        onChange={handleChange}
-        placeholder="価格"
-        style={{ lineHeight: '1.5' }} // 行間を指定
-      />
-      <button type="submit">送信</button>
-    </form>
+    </div>
   );
 }
