@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy.orm import relationship
 from backend.database import Base
 
 class Product(Base):
@@ -11,4 +12,19 @@ class Product(Base):
 class Purchase(Base):
     __tablename__ = 'purchases'
     id = Column(Integer, primary_key=True, index=True)
-    total = Column(Float)
+    total_amount = Column(Float)
+
+    details = relationship("PurchaseDetail", back_populates="purchase")
+
+class PurchaseDetail(Base):
+    __tablename__ = "purchase_details"
+
+    id = Column(Integer, primary_key=True, index=True)
+    purchase_id = Column(Integer, ForeignKey('purchases.id'))
+    product_id = Column(Integer, ForeignKey('products.id'))
+    quantity = Column(Integer)
+    price = Column(Float)
+
+    # 関連するエンティティを定義（任意）
+    purchase = relationship("Purchase", back_populates="details")
+    product = relationship("Product")
